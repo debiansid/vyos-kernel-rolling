@@ -1,4 +1,4 @@
-name: VyOS 1.5 rolling fullconenat kernel Build and Release
+name: VyOS 1.5 netfilter fullconenat kernel Build and Release
 permissions:
   contents: write
 on:
@@ -35,9 +35,9 @@ jobs:
         pwd
 
         cd linux-kernel
-        wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.6.10.tar.xz
-        tar xf linux-6.6.10.tar.xz
-        ln -s linux-6.6.10 linux 
+        wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.6.11.tar.xz
+        tar xf linux-6.6.11.tar.xz
+        ln -s linux-6.6.11 linux 
         ./build-kernel.sh
         rm *dev*.deb
     - name: make intel-qat deb
