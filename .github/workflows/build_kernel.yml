@@ -35,9 +35,9 @@ jobs:
         pwd
 
         cd linux-kernel
-        wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.6.35.tar.xz
-        tar xf linux-6.6.35.tar.xz
-        ln -s linux-6.6.35 linux 
+        wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.6.43.tar.xz
+        tar xf linux-6.6.43.tar.xz
+        ln -s linux-6.6.43 linux 
         ./build-kernel.sh
         rm *dev*.deb
     - name: make intel-qat deb
