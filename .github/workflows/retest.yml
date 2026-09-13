@@ -1,6 +1,7 @@
 name: Retest Fullcone kernel artifact
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - .github/workflows/retest.yml
