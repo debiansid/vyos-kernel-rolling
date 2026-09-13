@@ -161,7 +161,7 @@ jobs:
           image=$(find kernel-packages -type f -name '${{ needs.build.outputs.image }}' -print -quit)
           test -n "$image"
           sudo dpkg-deb --extract "$image" rootfs
-          release=$(find rootfs/usr/lib/modules -mindepth 1 -maxdepth 1 -type d -printf '%f\n' -quit)
+          release=$(find rootfs/lib/modules -mindepth 1 -maxdepth 1 -type d -printf '%f\n' -quit)
           test -n "$release"
           sudo chroot rootfs depmod -a "$release"
           sudo install -m 0755 fullcone/tests/fullcone-boot-test.sh rootfs/init
