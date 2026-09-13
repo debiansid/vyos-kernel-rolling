@@ -58,16 +58,24 @@ jobs:
           sudo cp fullcone-packages/*.deb rootfs/tmp/
           sudo chroot rootfs sh -c 'dpkg -i /tmp/*.deb'
 
-      - name: Assemble initramfs
+      - name: Extract kernel package
         run: |
           set -euo pipefail
           image=$(find kernel-packages -type f -name 'linux-image-*.deb' -print -quit)
           test -n "$image"
           sudo dpkg-deb --extract "$image" rootfs
+
+      - name: Install init script
+        run: |
+          set -euo pipefail
           sudo install -m 0755 fullcone/tests/fullcone-boot-test.sh rootfs/init
           sudo rm -f rootfs/dev/console
           sudo mknod -m 0600 rootfs/dev/console c 5 1
           cp rootfs/boot/vmlinuz-* vmlinuz
+
+      - name: Pack initramfs
+        run: |
+          set -euo pipefail
           sudo sh -c 'cd rootfs && find . -print0 | cpio --null -o --format=newc | gzip -1 > ../initramfs.cpio.gz'
 
       - name: Boot and exercise both Fullcone paths
