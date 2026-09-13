@@ -61,7 +61,7 @@ jobs:
       - name: Extract kernel package
         run: |
           set -euo pipefail
-          image=$(find kernel-packages -type f -name 'linux-image-*.deb' -print -quit)
+          image=$(find kernel-packages -type f -name 'linux-image-*.deb' ! -name '*-dbg_*' -print -quit)
           test -n "$image"
           sudo dpkg-deb --extract "$image" rootfs
 
