@@ -66,11 +66,18 @@ jobs:
           sudo dpkg-deb --extract "$image" rootfs
 
       - name: Install init script
+        run: sudo install -m 0755 fullcone/tests/fullcone-boot-test.sh rootfs/init
+
+      - name: Create console device
         run: |
           set -euo pipefail
-          sudo install -m 0755 fullcone/tests/fullcone-boot-test.sh rootfs/init
           sudo rm -f rootfs/dev/console
           sudo mknod -m 0600 rootfs/dev/console c 5 1
+
+      - name: Locate kernel image
+        run: |
+          set -euo pipefail
+          find rootfs -type f -path '*/boot/*' -printf '%P\n'
           cp rootfs/boot/vmlinuz-* vmlinuz
 
       - name: Pack initramfs
