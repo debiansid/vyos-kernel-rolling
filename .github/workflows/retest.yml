@@ -97,7 +97,7 @@ jobs:
           timeout --signal=KILL 180s qemu-system-x86_64 \
             -machine accel=tcg \
             -cpu max \
-            -m 768M \
+            -m 2G \
             -smp 2 \
             -kernel vmlinuz \
             -initrd initramfs.cpio.gz \
