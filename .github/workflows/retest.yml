@@ -77,8 +77,10 @@ jobs:
       - name: Locate kernel image
         run: |
           set -euo pipefail
-          find rootfs -type f -path '*/boot/*' -printf '%P\n'
-          cp rootfs/boot/vmlinuz-* vmlinuz
+          image=$(find kernel-packages -type f -name 'linux-image-*.deb' ! -name '*-dbg_*' -print -quit)
+          paths=$(find rootfs -iname '*vmlinuz*' -o -iname '*bzimage*' -o -iname 'image')
+          echo "::error title=Kernel image inventory::package=$image paths=${paths//$'\n'/,}"
+          exit 1
 
       - name: Pack initramfs
         run: |
