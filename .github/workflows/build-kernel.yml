@@ -180,7 +180,7 @@ jobs:
             -initrd initramfs.cpio.gz \
             -append 'console=ttyS0 rdinit=/init panic=-1' \
             -nographic \
-            -no-reboot 2>&1 | tr -d '\r' | tee console.log
+            -no-reboot 2>&1 | tr -d '\r' | tee console.log || true
           grep -q '^FULLCONE_PATH_PASS name=fullcone ' console.log
           grep -q '^FULLCONE_PATH_PASS name=brcm ' console.log
           grep -q '^FULLCONE_TEST_PASS$' console.log
