@@ -33,6 +33,15 @@ jobs:
           ref: rolling
           path: vyos-build
 
+      - name: Install current VyOS kernel build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t dependencies < <(python3 -c 'import tomllib; print(*tomllib.load(open("vyos-build/scripts/package-build/linux-kernel/package.toml", "rb"))["dependencies"]["packages"], sep="\n")')
+          sudo apt-get update
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            "${dependencies[@]}"
+
       - name: Fetch verified kernel and firmware sources
         working-directory: fullcone
         shell: bash
