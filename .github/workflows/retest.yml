@@ -97,6 +97,11 @@ jobs:
             -append 'console=ttyS0 rdinit=/init panic=-1' \
             -nographic \
             -no-reboot 2>&1 | tr -d '\r' | tee console.log || true
+          {
+            echo '```text'
+            tail -n 100 console.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify nftables Fullcone path
         run: grep -q '^FULLCONE_PATH_PASS name=fullcone ' console.log
