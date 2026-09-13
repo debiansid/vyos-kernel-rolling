@@ -46,10 +46,10 @@ jobs:
           test -n "$kernel"
           test -n "$firmware"
 
-          gpg2 --batch --locate-keys torvalds@kernel.org gregkh@kernel.org
+          gpg --batch --locate-keys torvalds@kernel.org gregkh@kernel.org
           curl -fLO --retry 3 "https://www.kernel.org/pub/linux/kernel/v6.x/linux-${kernel}.tar.xz"
           curl -fLO --retry 3 "https://www.kernel.org/pub/linux/kernel/v6.x/linux-${kernel}.tar.sign"
-          xz -cd "linux-${kernel}.tar.xz" | gpg2 --verify "linux-${kernel}.tar.sign" -
+          xz -cd "linux-${kernel}.tar.xz" | gpg --verify "linux-${kernel}.tar.sign" -
           tar xf "linux-${kernel}.tar.xz"
           ln -s "linux-${kernel}" linux
 
