@@ -1,4 +1,4 @@
-name: Build VyOS rolling Fullcone kernel
+name: Build VyOS rolling Fullcone kernel and drivers
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       artifact: ${{ steps.meta.outputs.artifact }}
       tag: ${{ steps.meta.outputs.tag }}
     steps:
-      - name: Checkout Fullcone patches
+      - name: Checkout kernel build scripts
         uses: actions/checkout@v6
         with:
           path: fullcone
@@ -33,46 +33,74 @@ jobs:
           ref: rolling
           path: vyos-build
 
-      - name: Add Alpine Fullcone patch set
+      - name: Fetch verified kernel and firmware sources
+        working-directory: fullcone
         shell: bash
         run: |
           set -euo pipefail
-          install -m 0644 fullcone/patches/kernel/*.patch \
-            vyos-build/scripts/package-build/linux-kernel/patches/kernel/
-          install -m 0644 fullcone/config/21-fullcone.config \
-            vyos-build/scripts/package-build/linux-kernel/config/
+          kernel=$(sed -n 's/^kernel_version = "\([^"]*\)"/\1/p' ../vyos-build/data/defaults.toml)
+          firmware=$(awk '
+            $0 == "name = \"linux-firmware\"" { found=1; next }
+            found && /^commit_id = / { gsub(/\"/, "", $3); print $3; exit }
+          ' ../vyos-build/scripts/package-build/linux-kernel/package.toml)
+          test -n "$kernel"
+          test -n "$firmware"
 
-      - name: Build kernel packages
-        working-directory: vyos-build/scripts/package-build/linux-kernel
+          gpg2 --batch --locate-keys torvalds@kernel.org gregkh@kernel.org
+          curl -fLO --retry 3 "https://www.kernel.org/pub/linux/kernel/v6.x/linux-${kernel}.tar.xz"
+          curl -fLO --retry 3 "https://www.kernel.org/pub/linux/kernel/v6.x/linux-${kernel}.tar.sign"
+          xz -cd "linux-${kernel}.tar.xz" | gpg2 --verify "linux-${kernel}.tar.sign" -
+          tar xf "linux-${kernel}.tar.xz"
+          ln -s "linux-${kernel}" linux
+
+          git clone --filter=blob:none --no-checkout \
+            https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
+          git -C linux-firmware checkout "$firmware"
+
+      - name: Build kernel, Intel QAT driver, and firmware packages
+        working-directory: fullcone
         shell: bash
         run: |
           set -euo pipefail
-          sudo --preserve-env ./build.py --config package.toml --packages linux-kernel
+          export KERNEL_FLAVOR=$(sed -n 's/^kernel_flavor = "\([^"]*\)"/\1/p' ../vyos-build/data/defaults.toml)
+          test -n "$KERNEL_FLAVOR"
+          ./build-kernel.sh
+          ./build-intel-qat.sh
+          ./build-linux-firmware.sh
 
-      - name: Verify kernel package
+      - name: Verify packages
         id: meta
+        working-directory: fullcone
         shell: bash
         run: |
           set -euo pipefail
-          kernel=$(sed -n 's/^kernel_version = "\([^"]*\)"/\1/p' vyos-build/data/defaults.toml)
-          package="vyos-build/scripts/package-build/linux-kernel/linux-image-${kernel}-vyos_${kernel}-1_amd64.deb"
-          test -f "$package"
-          mkdir kernel-root
-          dpkg-deb --extract "$package" kernel-root
-          module=$(find kernel-root -type f -name 'nft_fullcone.ko*' -print -quit)
-          test -n "$module"
-          test -s "$module"
-          test "$(dpkg-deb --field "$package" Package)" = "linux-image-${kernel}-vyos"
-          test "$(dpkg-deb --field "$package" Version)" = "${kernel}-1"
-          artifact="vyos-kernel-${kernel}-fullcone"
-          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
+          kernel=$(sed -n 's/^kernel_version = "\([^"]*\)"/\1/p' ../vyos-build/data/defaults.toml)
+          flavor=$(sed -n 's/^kernel_flavor = "\([^"]*\)"/\1/p' ../vyos-build/data/defaults.toml)
+          image=$(find . -maxdepth 1 -type f -name "linux-image-${kernel}-${flavor}_*.deb" -print -quit)
+          qat=$(find . -maxdepth 1 -type f -name 'vyos-intel-qat_*.deb' -print -quit)
+          firmware=$(find . -maxdepth 1 -type f -name 'vyos-linux-firmware_*.deb' -print -quit)
+          test -n "$image"
+          test -n "$qat"
+          test -n "$firmware"
+
+          mkdir kernel-root qat-root
+          dpkg-deb --extract "$image" kernel-root
+          dpkg-deb --extract "$qat" qat-root
+          test -n "$(find kernel-root -type f -name 'nft_fullcone.ko*' -print -quit)"
+          test -n "$(find qat-root -type f -name '*.ko*' -print -quit)"
+          test "$(dpkg-deb --field "$image" Package)" = "linux-image-${kernel}-${flavor}"
+          test "$(dpkg-deb --field "$image" Version)" = "${kernel}-1"
+          test "$(dpkg-deb --field "$qat" Package)" = vyos-intel-qat
+          test "$(dpkg-deb --field "$firmware" Package)" = vyos-linux-firmware
+
+          echo "artifact=vyos-kernel-${kernel}-fullcone" >> "$GITHUB_OUTPUT"
           echo "tag=${kernel}-fullcone.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
-      - name: Upload kernel packages
+      - name: Upload packages
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.meta.outputs.artifact }}
-          path: vyos-build/scripts/package-build/linux-kernel/linux-*.deb
+          path: fullcone/*.deb
           retention-days: 7
           if-no-files-found: error
 
@@ -119,7 +147,9 @@ jobs:
 
           sudo cp fullcone-packages/*.deb rootfs/tmp/
           sudo chroot rootfs sh -c 'dpkg -i /tmp/*.deb'
-          sudo dpkg-deb --extract kernel-packages/linux-image-*.deb rootfs
+          image=$(find kernel-packages -maxdepth 1 -type f -name 'linux-image-*.deb' -print -quit)
+          test -n "$image"
+          sudo dpkg-deb --extract "$image" rootfs
           sudo install -m 0755 fullcone/tests/fullcone-boot-test.sh rootfs/init
           sudo rm -f rootfs/dev/console
           sudo mknod -m 0600 rootfs/dev/console c 5 1
@@ -157,7 +187,7 @@ jobs:
     needs: [build, test]
     runs-on: ubuntu-24.04
     steps:
-      - name: Download kernel packages
+      - name: Download packages
         uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build.outputs.artifact }}
@@ -173,5 +203,5 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "VyOS rolling kernel $TAG" \
-            --notes "VyOS rolling kernel with the homerouter/aports Fullcone and Broadcom Fullcone patch set. Both paths passed the QEMU network-namespace test." \
+            --notes "VyOS rolling kernel, Intel QAT driver, and selected firmware built by the repository's shell scripts. The homerouter/aports Fullcone and Broadcom Fullcone paths passed the QEMU network-namespace test." \
             --prerelease
