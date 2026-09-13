@@ -213,9 +213,12 @@ jobs:
           TAG: ${{ needs.build.outputs.tag }}
         shell: bash
         run: |
-          gh release create "$TAG" release/*.deb \
+          gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "VyOS rolling kernel $TAG" \
             --notes "VyOS rolling kernel, Intel QAT driver, and selected firmware built by the repository's shell scripts. The homerouter/aports Fullcone and Broadcom Fullcone paths passed the QEMU network-namespace test." \
-            --prerelease
+            --draft
+          gh release upload "$TAG" release/*.deb --repo "$GITHUB_REPOSITORY"
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --draft=false --prerelease

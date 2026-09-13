@@ -7,6 +7,7 @@ on:
 
 permissions:
   actions: read
+  contents: write
 
 jobs:
   test:
@@ -168,3 +169,12 @@ jobs:
       - name: Verify complete Fullcone test
         if: always()
         run: grep -q '^FULLCONE_TEST_PASS$' console.log
+
+      - name: Publish verified firmware package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload 6.18.50-fullcone.5 kernel-packages/vyos-linux-firmware_*.deb \
+            --repo "$GITHUB_REPOSITORY"
+          gh release edit 6.18.50-fullcone.5 --repo "$GITHUB_REPOSITORY" \
+            --draft=false --prerelease
