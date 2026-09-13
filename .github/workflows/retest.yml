@@ -110,7 +110,32 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Found guest runtime tools
+        if: always()
+        continue-on-error: true
+        run: grep -q '^+ nft --version$' console.log
+
+      - name: Mounted proc
+        if: always()
+        continue-on-error: true
+        run: grep -q '^+ mount -t sysfs sysfs /sys$' console.log
+
+      - name: Mounted sysfs
+        if: always()
+        continue-on-error: true
+        run: grep -q '^+ mount -t devtmpfs devtmpfs /dev$' console.log
+
+      - name: Mounted devtmpfs
+        if: always()
+        continue-on-error: true
+        run: grep -q '^+ mount -t tmpfs tmpfs /run$' console.log
+
       - name: Reached nft_fullcone module load
+        if: always()
+        continue-on-error: true
+        run: grep -q '^+ modprobe nft_fullcone$' console.log
+
+      - name: Loaded nft_fullcone module
         if: always()
         continue-on-error: true
         run: grep -q '^+ modprobe veth$' console.log
