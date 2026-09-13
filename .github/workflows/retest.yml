@@ -65,6 +65,13 @@ jobs:
           test -n "$image"
           sudo dpkg-deb --extract "$image" rootfs
 
+      - name: Generate module dependency map
+        run: |
+          set -euo pipefail
+          release=$(find rootfs/usr/lib/modules -mindepth 1 -maxdepth 1 -type d -printf '%f\n' -quit)
+          test -n "$release"
+          sudo chroot rootfs depmod -a "$release"
+
       - name: Install init script
         run: sudo install -m 0755 fullcone/tests/fullcone-boot-test.sh rootfs/init
 
