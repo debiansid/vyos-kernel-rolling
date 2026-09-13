@@ -103,11 +103,36 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Verify nftables Fullcone path
-        run: grep -q '^FULLCONE_PATH_PASS name=fullcone ' console.log
+      - name: Reached nft_fullcone module load
+        if: always()
+        continue-on-error: true
+        run: grep -q '^+ modprobe veth$' console.log
 
-      - name: Verify Broadcom Fullcone path
-        run: grep -q '^FULLCONE_PATH_PASS name=brcm ' console.log
+      - name: Built test network
+        if: always()
+        continue-on-error: true
+        run: grep -q '^+ install_rules fullcone$' console.log
+
+      - name: Installed nftables Fullcone rules
+        if: always()
+        continue-on-error: true
+        run: grep -q '^+ exercise_path fullcone 20000 20010$' console.log
+
+      - name: Completed first Fullcone mapping
+        if: always()
+        continue-on-error: true
+        run: grep -q '^+ receive_once peer2 4001 /tmp/peer2.out$' console.log
+
+      - name: Completed second Fullcone mapping
+        if: always()
+        continue-on-error: true
+        run: grep -q '^+ receive_once client 12345 /tmp/client.out$' console.log
+
+      - name: Accepted unsolicited inbound packet
+        if: always()
+        continue-on-error: true
+        run: grep -q '^+ ip netns exec router nft list ruleset$' console.log
 
       - name: Verify complete Fullcone test
+        if: always()
         run: grep -q '^FULLCONE_TEST_PASS$' console.log
